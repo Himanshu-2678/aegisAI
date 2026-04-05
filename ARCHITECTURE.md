@@ -9,14 +9,14 @@ graph TD
     
     %% Security Layer
     Firewall{"Cybersecurity Red-Team \nInterceptor"}:::security
-    Block[🚨 TERMINAL BLOCK: \nMalicious Intent]:::error
+    Block[TERMINAL BLOCK: \nMalicious Intent]:::error
     
     %% Memory Layer
     Trauma[(Trauma Memory DB)]:::memory
     Experience[(Optimization metrics DB)]:::memory
     
     %% RAG Core
-    PreLoad[⚡ Pre-Load Optimal Strategy]:::strategy
+    PreLoad[Pre-Load Optimal Strategy]:::strategy
     Worker[Worker RAG Agent]:::core
     Chroma[(ChromaDB Vector Store)]:::db
     AgenticRAG[Agentic RAG \nQuery Auto-Rewriter]:::agentic
