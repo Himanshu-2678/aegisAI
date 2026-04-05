@@ -1,4 +1,4 @@
-# AegisAI: A Self-Healing Orchestrator Prototype
+# AegisAI: A Self-Healing AI Orchestration System
 Built for Capgemini Buildathon 2026
 
 AegisAI is an early-stage production-oriented AI meta-layer designed to transform unreliable large language model outputs into deterministic, observable, and secure systems.
@@ -31,7 +31,7 @@ This ensures that:
 - Every decision is traceable
 
 ## System Architecture
-Visit [Architecture.md](Architecture.md) for detailed flowchart visuals.
+Visit [ARCHITECTURE.md](ARCHITECTURE.md) for detailed flowchart visuals.
 
 At a high level, the system is composed of:
 - Input Security Layer
@@ -39,7 +39,7 @@ At a high level, the system is composed of:
 - Evaluation Engine
 - Multi-Agent Reasoning Layer
 - Recovery & Orchestration Core
-- Telemetry Database
+- Observability Layer (Logging + Metrics)
 
 Each module is independently designed but tightly orchestrated through a central controller.
 
@@ -52,13 +52,20 @@ AegisAI introduces a structured reasoning framework:
 - **Judge Agent** computes a final confidence score
 
 This replaces naive output acceptance with structured adversarial validation.
-**Evaluation Rules:** The Supreme Judge executes completely deterministically (`temperature=0.0`) and evaluates explicit scoring variables rather than implicit prompting. The final determination couples internal LLM semantic scoring with a hardcoded mathematical threshold on the **Lexical Jaccard Overlap Function** `len(intersection(ans, ctx)) / len(ans)` to explicitly eliminate generative false guarantees. The 20% lexical overlap threshold was empirically selected to balance false positives (over-blocking valid responses) and false negatives (hallucination pass-through) across validation samples.
+**Evaluation Rules:**
+The Judge operates deterministically (temperature=0.0) and enforces a hard constraint using a lexical Jaccard overlap score:
+
+overlap = len(intersection(answer, context)) / len(answer)
+
+If overlap < 20%, the response is treated as hallucinated and the system triggers recovery or aborts execution.
+
+The 20% threshold was empirically selected to balance false positives and false negatives.
 
 ### 2. Auto-Evolving Agentic RAG
 If retrieval fails:
 - The system does not return empty results
-- An internal optimizer rewrites the query into multiple semantically distinct search geometries
-- Retrieval is aggressively re-attempted automatically
+- An internal optimizer rewrites the query into multiple semantically distinct query variations
+- Retrieval is retried automatically
 
 ### 3. Experience-Based Learning (Trauma Memory)
 A local database (`experience.db`) permanently stores:
@@ -66,12 +73,12 @@ A local database (`experience.db`) permanently stores:
 - Recovery strategy hashes successfully used
 - Outcome effectiveness and proxy token tracking
 
-Future queries are preemptively corrected using these mapped historical signals.
+Future queries are preemptively corrected using these historical patterns.
 
 ### 4. Zero-Trust Security Firewall
 Before entering the RAG execution pipeline:
-- Inputs are scanned for standard prompt injection topology
-- Jailbreak attempts are heuristically mapped and intercepted
+- Inputs are scanned for standard prompt injection patterns
+- Jailbreak attempts are heuristically detected and intercepted
 - Malicious red-team patterns are explicitly filtered
 
 ### 5. Full Observability Layer
@@ -86,26 +93,32 @@ No hidden decision-making. Everything is rigorously inspectable.
 
 ### 1. Data Redaction Enforcement (Policy Violation Catch)
 When a user explicitly attempts to extract sensitive credentials, the Supervisor detects the policy violation entirely decoupled from basic string-matching, dynamically escalating to a strict redaction protocol.
+
 ![Database Password Redaction](assets/ques_db_psd.png)
 
-### 2. Hallucination Abort (Mathematical Grounding Check)
+### 2. Hallucination Abort (Deterministic Validation)
 ![System Architecture Hallucination Catch](assets/ques_system_arc.png)
 
-- **The Prompt Trap:** We asked about "system's architecture", which isn't fully defined in our mock ChromaDB.
-- **First Output:** The AI tried to be "chatty" and combined the small bit of context it had with a long-winded paragraph explaining that it doesn't know the rest.
-- **The Mathematical Catch:** The Supervisor Judge analyzed the answer. Even if the LLM judge thought the answer was "technically" safe, the Deterministic Mathematical Grounding check (the Jaccard lexical overlap check in `evaluation/detectors.py`) realized that the AI was using too many foreign words not found in the original documents. It forcibly overturned the score to 0.50, flagging it as a Hallucination!
-- **Adaptive Struggle:** The Orchestrator escalated to your recovery strategies (`[v1]` and `[v2]`). It tried twice to get the AI to output only the facts, but the LLM kept adding extra unsupported fluff.
-- **Terminal Safe Execution:** Because AegisAI is built as an enterprise guardrail, it eventually reached the Terminal State. Instead of blindly throwing up its hands and letting the user see the potentially hallucinatory text, the Orchestrator aborted the request entirely and returned the `System Error: AegisAI Supervisor aborted generating response due to critically unsafe truth constraints.`
+Query: Asked for system architecture not fully present in the database.
+
+Behavior:
+- LLM generated partially grounded + partially unsupported response
+- Jaccard overlap dropped below 20%
+- System flagged output as hallucinated
+- Recovery strategies attempted correction
+- Final state: execution aborted to prevent unsafe output
+
+Result: No hallucinated response exposed to user.
 
 ## Empirical Validation (Live Local Benchmarking)
 
 **1. Baseline LLM vs AegisAI Hallucination Block-Rate**
 - **Test Setup:** In controlled testing environments (`n=30` explicit edge-case scope), queries were engineered to target blank knowledge limits against local LLaMA-3 deployments.
 - **Baseline LLM Pipeline:** The naive architecture naturally failed 27 out of 30 injections (90.0% Hallucination Pass-Through Rate).
-- **AegisAI Intercept Layer:** In identical conditions, the system successfully resolved a 0.0% Hallucination Pass-Through Rate, mitigating exactly 30/30 baseline anomalies dynamically.
+- **AegisAI Intercept Layer:** In identical conditions, the system achieved a 0.0% hallucination pass-through rate, blocking 30/30 cases (n=30).
 
 **2. Tracing the System Failure Boundary (Adversarial Bypass)**
-*No prototype is flawless. A raw trace showing our heuristic Firewall failing to detect an obfuscated Base64 Injection mapping exactly where the LLM layer fundamentally separates from strict classifiers.*
+*No prototype is flawless. A raw trace showing our heuristic Firewall failing to detect an obfuscated Base64 Injection mapping exactly where the LLM layer differs from strict classifiers.*
 
 ```json
 [
@@ -178,22 +191,24 @@ Token cost is estimated via internal heuristics.
 
 ## Project Structure
 ```text
-.
-├── main.py                  # FastAPI server entry point
-├── orchestrator/            # Core routing cycle
-├── rag/                     # Retrieval system & Sub-Agent Auto-Optimizers
-├── evaluation/              # Meta-Judges & Strict Factual Scoring routines
-├── security/                # Prompt Firewall & Active Threat Filters
-├── strategies/              # Dynamic fallback policies explicit pool
-├── memory/                  # Experience tracking & Trauma SQLite Database
-├── api/                     # Controller endpoints mapped to routes
-├── ui/                      # Dashboard layouts and HTML templates
-├── tests/                   # Regression and integration test flows
-├── assets/                  # Diagrams and demonstration UI screenshots
-├── architecture.md          # Visual flowchart ecosystem
-└── requirements.txt         # Dependencies
+aegisAI
+  ├── main.py                  # FastAPI server entry point
+  ├── orchestrator/            # Core routing cycle
+  ├── rag/                     # Retrieval system & Sub-Agent Auto-Optimizers
+  ├── evaluation/              # Meta-Judges & Strict Factual Scoring routines
+  ├── security/                # Prompt Firewall & Active Threat Filters
+  ├── strategies/              # Dynamic fallback policies explicit pool
+  ├── memory/                  # Experience tracking & Trauma SQLite Database
+  ├── api/                     # Controller endpoints mapped to routes
+  ├── ui/                      # Dashboard layouts and HTML templates
+  ├── tests/                   # Regression and integration test flows
+  ├── assets/                  # Diagrams and demonstration UI screenshots
+  ├── architecture.md          # Visual flowchart ecosystem
+  └── requirements.txt         # Dependencies
 ```
 
-## Contributors
-Built collaboratively for Capgemini Buildathon 2026 with 
-- 
+## License
+
+This project is licensed under the MIT License. You are free to use, modify, and distribute this software with proper attribution.
+
+See the [MIT License](LICENSE) file for full details.
