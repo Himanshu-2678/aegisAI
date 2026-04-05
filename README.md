@@ -43,6 +43,30 @@ At a high level, the system is composed of:
 
 Each module is independently designed but tightly orchestrated through a central controller.
 
+
+
+## Demo
+
+### 1. Data Redaction Enforcement (Policy Violation Catch)
+When a user explicitly attempts to extract sensitive credentials, the Supervisor detects the policy violation entirely decoupled from basic string-matching, dynamically escalating to a strict redaction protocol.
+
+![Database Password Redaction](assets/ques_db_psd.png)
+
+### 2. Hallucination Abort (Deterministic Validation)
+![System Architecture Hallucination Catch](assets/ques_system_arc.png)
+
+Query: Asked for system architecture not fully present in the database.
+
+Behavior:
+- LLM generated partially grounded + partially unsupported response
+- Jaccard overlap dropped below 20%
+- System flagged output as hallucinated
+- Recovery strategies attempted correction
+- Final state: execution aborted to prevent unsafe output
+
+Result: No hallucinated response exposed to user.
+
+
 ## Key Capabilities
 
 ### 1. Multi-Agent Courtroom System
@@ -89,26 +113,6 @@ Every execution exposes:
 
 No hidden decision-making. Everything is rigorously inspectable.
 
-## Demo
-
-### 1. Data Redaction Enforcement (Policy Violation Catch)
-When a user explicitly attempts to extract sensitive credentials, the Supervisor detects the policy violation entirely decoupled from basic string-matching, dynamically escalating to a strict redaction protocol.
-
-![Database Password Redaction](assets/ques_db_psd.png)
-
-### 2. Hallucination Abort (Deterministic Validation)
-![System Architecture Hallucination Catch](assets/ques_system_arc.png)
-
-Query: Asked for system architecture not fully present in the database.
-
-Behavior:
-- LLM generated partially grounded + partially unsupported response
-- Jaccard overlap dropped below 20%
-- System flagged output as hallucinated
-- Recovery strategies attempted correction
-- Final state: execution aborted to prevent unsafe output
-
-Result: No hallucinated response exposed to user.
 
 ## Empirical Validation (Live Local Benchmarking)
 
