@@ -1,7 +1,5 @@
 # AegisAI - Full Systems Architecture Diagram
 
-You can copy and paste the below Code Block directly into your final GitHub [README.md](file:///c:/Users/himan/Desktop/Projects/aegisAI/README.md). Any standard markdown viewer (including GitHub) will automatically render it into a beautiful flowchart!
-
 ```mermaid
 graph TD
     %% Base Infrastructure
