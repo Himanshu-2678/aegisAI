@@ -31,6 +31,8 @@ This ensures that:
 - Every decision is traceable
 
 ## System Architecture
+![AegisAI Architecture](assets/architecture_diagram_aegisAI.png)
+
 Visit [ARCHITECTURE.md](ARCHITECTURE.md) for detailed flowchart visuals.
 
 At a high level, the system is composed of:
