@@ -1,9 +1,13 @@
 # AegisAI: A Self-Healing AI Orchestration System
-Built for Capgemini Buildathon 2026
 
-AegisAI is an early-stage production-oriented AI meta-layer designed to transform unreliable large language model outputs into deterministic, observable, and secure systems.
+AegisAI is a self-healing orchestration system for LLM pipelines that integrates input security, agent-based validation, and output scoring to detect hallucinations, reject unreliable responses, and recover from failures in real-world deployments.
 
-This project was built as a team effort for Capgemini Buildathon 2026, with a focus on solving real-world deployment risks in generative AI systems.
+## Key Results
+
+- Reduced hallucination pass-through from **90% to 0%** in controlled adversarial scenarios (n=30)
+- Successfully blocked all tested out-of-scope hallucinations using validation + recovery pipeline
+- Identified a real-world failure case where **Base64-encoded prompt injection bypassed the firewall**, leading to LLM-side decoding
+
 
 ## Overview
 Modern LLM systems are fundamentally non-deterministic. They hallucinate, fail unpredictably, and are vulnerable to adversarial inputs such as prompt injections.
@@ -121,10 +125,14 @@ No hidden decision-making. Everything is rigorously inspectable.
 **1. Baseline LLM vs AegisAI Hallucination Block-Rate**
 - **Test Setup:** In controlled testing environments (`n=30` explicit edge-case scope), queries were engineered to target blank knowledge limits against local LLaMA-3 deployments.
 - **Baseline LLM Pipeline:** The naive architecture naturally failed 27 out of 30 injections (90.0% Hallucination Pass-Through Rate).
-- **AegisAI Intercept Layer:** In identical conditions, the system achieved a 0.0% hallucination pass-through rate, blocking 30/30 cases (n=30).
+- **AegisAI Intercept Layer**: reduced hallucination pass-through from 90% to 0% in controlled test scenarios (n=30) under defined validation criteria.
 
-**2. Tracing the System Failure Boundary (Adversarial Bypass)**
-*No prototype is flawless. A raw trace showing our heuristic Firewall failing to detect an obfuscated Base64 Injection mapping exactly where the LLM layer differs from strict classifiers.*
+### Failure Case Analysis (Adversarial Bypass)
+A critical failure was observed where an obfuscated Base64 prompt injection bypassed the heuristic firewall.  
+The input appeared harmless at the surface level but was decoded by the LLM internally, leading to exposure of restricted information.  
+This highlights a key limitation of rule-based or heuristic prompt filtering: they operate on surface structure, while LLMs can semantically interpret encoded inputs.
+
+**Proposed mitigation:** Replace heuristic filtering with an embedding-based threat classifier to detect semantically similar attack patterns beyond literal string matching.
 
 ```json
 [
