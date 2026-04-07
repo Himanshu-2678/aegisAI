@@ -899,67 +899,89 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: q, ...opts })
                 });
-                const data = await res.json();
 
-                const tl = document.getElementById(`tl-${id}`);
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
+
                 const group = document.getElementById(id);
+                const tl = document.getElementById(`tl-${id}`);
                 tl.innerHTML = '';
 
-                if (data.status === 'success' || data.status === 'error') {
-                    (data.traces || []).forEach(t => {
-                        tl.insertAdjacentHTML('beforeend', `
-                        <div class="t-row">
-                            <span class="t-lbl">${x(t.step)}</span>
-                            <span class="t-det">${x(t.detail)}</span>
-                        </div>
-                    `);
-                    });
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-                    if (data.original_failed_output) {
-                        group.insertAdjacentHTML('beforeend', `
-                        <div class="intercept">
-                            <div class="i-tag">
-                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <line x1="12" y1="8" x2="12" y2="12"/>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                                </svg>
-                                Blocked · anomaly detected
-                            </div>
-                            <div class="i-rule"></div>
-                            <div class="i-text">${x(data.original_failed_output).replace(/\n/g, '<br>')}</div>
-                        </div>
-                    `);
-                    }
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // keep partial lines in buffer
 
-                    if (data.output) {
-                        const badge = data.original_failed_output
-                            ? `<div class="badge-ok">
-                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                </svg>Corrected
-                            </div>`
-                            : '';
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const msg = JSON.parse(line);
+                            
+                            if (msg.event === "trace" || msg.event === "error") {
+                                const t = msg.data;
+                                tl.insertAdjacentHTML('beforeend', `
+                                    <div class="t-row">
+                                        <span class="t-lbl">${x(t.step)}</span>
+                                        <span class="t-det">${x(t.detail)}</span>
+                                    </div>
+                                `);
+                                chat.scrollTop = chat.scrollHeight;
+                            } 
+                            else if (msg.event === "final") {
+                                const data = msg.data;
+                                
+                                if (data.original_failed_output) {
+                                    group.insertAdjacentHTML('beforeend', `
+                                    <div class="intercept">
+                                        <div class="i-tag">
+                                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                            </svg>
+                                            Blocked · anomaly detected
+                                        </div>
+                                        <div class="i-rule"></div>
+                                        <div class="i-text">${x(data.original_failed_output).replace(/\n/g, '<br>')}</div>
+                                    </div>
+                                    `);
+                                }
 
-                        let met = '';
-                        if (data.metrics) {
-                            met = `<div class="metrics">
-                            <span class="m-chip">strategy · ${x(String(data.metrics.strategy))}</span>
-                            <span class="m-chip">latency · ${data.metrics.latency.toFixed(1)}ms</span>
-                            <span class="m-chip">cost · $${data.metrics.cost.toFixed(6)}</span>
-                        </div>`;
-                        }
+                                if (data.output) {
+                                    const badge = data.original_failed_output
+                                        ? `<div class="badge-ok">
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"/>
+                                            </svg>Corrected
+                                        </div>`
+                                        : '';
 
-                        group.insertAdjacentHTML('beforeend', `
-                        <div class="final-card">
-                            ${badge}
-                            <div class="final-body">${x(data.output).replace(/\n/g, '<br>')}</div>
-                            ${met}
-                        </div>
-                    `);
+                                    let met = '';
+                                    if (data.metrics) {
+                                        met = `<div class="metrics">
+                                        <span class="m-chip">strategy · ${x(String(data.metrics.strategy))}</span>
+                                        <span class="m-chip">latency · ${data.metrics.latency.toFixed(1)}ms</span>
+                                        <span class="m-chip">cost · $${data.metrics.cost.toFixed(6)}</span>
+                                    </div>`;
+                                    }
+
+                                    group.insertAdjacentHTML('beforeend', `
+                                    <div class="final-card">
+                                        ${badge}
+                                        <div class="final-body">${x(data.output).replace(/\n/g, '<br>')}</div>
+                                        ${met}
+                                    </div>
+                                    `);
+                                }
+                                chat.scrollTop = chat.scrollHeight;
+                            }
+                        } catch(e) { console.error("JSON Parse Error", e); }
                     }
                 }
-
             } catch (err) {
                 document.getElementById(`tl-${id}`).insertAdjacentHTML('beforeend', `
                 <div class="t-row">
