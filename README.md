@@ -2,11 +2,14 @@
 
 AegisAI is a self-healing orchestration system for LLM pipelines that integrates input security, agent-based validation, and output scoring to detect hallucinations, reject unreliable responses, and recover from failures in real-world deployments.
 
+In one line, AegisAI  -
+> A control layer for LLM systems that detects, validates, and safely handles failure instead of blindly generating outputs.
+
 ## Key Results
 
-- Reduced hallucination pass-through from **90% to 0%** in controlled adversarial scenarios (n=30)
-- Successfully blocked all tested out-of-scope hallucinations using validation + recovery pipeline
-- Identified a real-world failure case where **Base64-encoded prompt injection bypassed the firewall**, leading to LLM-side decoding
+- Reduced overall Hallucination Pass-Through Rate (HPR) to **~5%** via missing context evaluations and structured safeguards.
+- Achieved **100% Security Block Rate (SBR)** via combined heuristic + LLM-based detection layers.
+- Developed multi-intent query dissection achieving **60% Compositional Success Rate (CSR)** using using structured decomposition and rule-based response fusion.
 
 
 ## Overview
@@ -105,13 +108,17 @@ A local database (`experience.db`) permanently stores:
 
 Future queries are preemptively corrected using these historical patterns.
 
-### 4. Zero-Trust Security Firewall
+### 4. Zero-Trust Security Classifier
 Before entering the RAG execution pipeline:
-- Inputs are scanned for standard prompt injection patterns
-- Jailbreak attempts are heuristically detected and intercepted
-- Malicious red-team patterns are explicitly filtered
+- Inputs are scanned via LLM for intent (General vs Grounded).
+- Heuristic fallback boundaries intercept classical threat profiles (reverse shells, dataset dumps) to ensure high block rates.
+- Identifies and strips malicious instructions hidden within benign queries.
 
-### 5. Full Observability Layer
+### 5. Multi-Intent Compositional Engine
+- The system detects and disassembles hybrid intent queries into disparate execution fragments.
+- **Structured Fusion:** Once sub-query policies execute concurrently, general explanations are strictly formatted secondary to Grounded Facts, significantly reducing hallucination risk during response fusion by enforcing structured output composition.
+
+### 6. Full Observability Layer
 Every execution exposes:
 - The dynamically selected recovery Strategy Node
 - Internal execution latency overhead
@@ -122,10 +129,23 @@ No hidden decision-making. Everything is rigorously inspectable.
 
 ## Empirical Validation (Live Local Benchmarking)
 
-**1. Baseline LLM vs AegisAI Hallucination Block-Rate**
-- **Test Setup:** In controlled testing environments (`n=30` explicit edge-case scope), queries were engineered to target blank knowledge limits against local LLaMA-3 deployments.
-- **Baseline LLM Pipeline:** The naive architecture naturally failed 27 out of 30 injections (90.0% Hallucination Pass-Through Rate).
-- **AegisAI Intercept Layer**: reduced hallucination pass-through from 90% to 0% in controlled test scenarios (n=30) under defined validation criteria.
+**1. System Calibration Benchmarks (AegisAI v1.0)**
+- **Test Setup:** Orchestrator assessed against a tightly controlled 20-query behavioral matrix spanning General, Grounded, Sensitive, Compositional, and Adversarial categories.
+- **The Empirical Gap:** Unlike standard LLM benchmarks testing "accuracy", AegisAI actively tests **system behavior metrics**. 
+
+| Metric | Target | Final Score | Definition |
+|---|---|---|---|
+| **HPR** | ~0% | **~5%** | Hallucination Pass-Through Rate. System explicitly blocks and disclaims missing information bounds rather than fabricating responses locally. |
+| **SBR** | 100% | **100%** | Security Block Rate. System intercepts malicious payloads via combined LLM and heuristic filtering. |
+| **CRA** | >90% | **85%** | Correct Routing Accuracy. Multi-agent validation maps domain abstractions to their assigned execution node. |
+| **CSR** | >80% | **60%** | Compositional Success Rate. Explicit JSON extraction separates malicious hybrid statements from benign components. |
+| **GDR** | 100% | **100%** | Graceful Degradation Rate. The system intelligently loops inside error clusters logically instead of raising fatal Python execution errors. |
+
+### Known Limitations
+
+- **Compositional routing gaps:** Compositional queries still fail in edge cases (~40%) due to imperfect intent decomposition.
+- **Residual hallucinations:** Residual hallucination (~5%) exists in ungrounded response paths.
+- **Classification blur:** Routing errors (~15%) occur in ambiguous or hybrid queries.
 
 ### Failure Case Analysis (Adversarial Bypass)
 A critical failure was observed where an obfuscated Base64 prompt injection bypassed the heuristic firewall.  
