@@ -180,84 +180,64 @@ def execute_with_supervisor(query: str, inject_hallucination: bool = False, inje
         traces.append(t)
         if on_trace: on_trace(t)
     
-    # 1. Master Security Check
-    security_eval = scan_prompt_for_injection(query)
-    add_trace("Master Security Firewall", "info", f"Actively scanning prompt geometry... (Scan Latency: {security_eval['latency']:.1f}ms)")
-    if not security_eval['safe']:
-        add_trace("CRITICAL SECURITY BLOCK", "error", f"Malicious Intent Detected (Threat: {security_eval['threat_level']:.2f}). Reason: {security_eval['reason']}")
-        return {
-            "status": "error",
-            "output": "AegisAI Security Enforcement: Your prompt has been successfully blocked.",
-            "traces": traces,
-            "query_type": "sensitive_query",
-            "selected_policy": "immediate_block",
-            "response_mode": "blocked",
-            "recovery_attempts": 0,
-            "final_status": "aborted_security"
-        }
-        
-    # 2. Decomposition Layer
+    # 1. Decomposition Layer First!
     decomp = decompose_query(query)
     is_comp = decomp.get("is_compositional", False)
     subs = decomp.get("sub_queries", [query])
     
     if is_comp:
-        add_trace("Query Decomposition", "info", f"Detected explicit {len(subs)}-part compositional query.")
+        add_trace("Query Decomposition", "info", f"Detected explicit {len(subs)}-part compositional query. Splitting execution paths.")
         
     sub_results = []
-    has_sensitive = False
     
-    # 3. Individual Sub-Query Pipeline Mapping
+    # 2. Iterate and Execute Independently (Zero-Trust applies per node)
     for i, sub in enumerate(subs):
-        # 3a. Classification Layer
+        trace_id = f"Seq-{i+1}" if is_comp else "Main"
+        add_trace(f"Intention Routing ({trace_id})", "info", f"Executing node: '{sub}'...")
+        
+        # Security checks the SUB-query, not the merged aggregate
         sub_secy = scan_prompt_for_injection(sub)
         sub_type = sub_secy.get('query_type', 'grounded_query')
         
-        if is_comp:
-            add_trace(f"Sub-query Classification Layer [{i+1}]", "success", f"Sub-query mapped to '{sub_type}'.")
-            
-        if sub_type == "sensitive_query":
-            has_sensitive = True
-            break
-            
-        # 3b. Routing executing
-        if is_comp:
-             add_trace(f"Sub-pipeline Route [{sub_type.split('_')[0].upper()}]", "info", "Executing isolated policy rules.")
-             
+        if not sub_secy['safe']:
+            add_trace("System Defense Priority", "error", f"Node `{sub}` intercepted as malicious ({sub_type}). Execution isolated and aborted.")
+            # INSTEAD OF BREAKING, WE FLAG IT AND CONTINUE EVALUATING SAFE NODES!
+            sub_results.append({
+                "status": "error",
+                "final_status": "aborted_security",
+                "query_type": "sensitive_query",
+                "output": "AegisAI Security Enforcement: Malicious request blocked in this query segment."
+            })
+            continue
+
+        # Valid sub-queries execute normally
         sub_res = _execute_single_intent(sub, sub_type, inject_hallucination, inject_empty_context, enable_agentic_rewrite, enable_jury, on_trace)
-             
-        # the trace items appended inside _execute_single_intent will bubble up explicitly via the add_trace inside it calling on_trace.
-        # we still collect them here to return the final list.
-        traces.extend(sub_res.get("traces", []))
-             
         sub_res["query_type"] = sub_type
         sub_results.append(sub_res)
-        
-    if has_sensitive:
-        add_trace("System Defense Priority", "error", "A compositional sub-query attempted a malicious exploit. Entire execution aborted.")
-        return {
-            "status": "error", "output": "System Defense Abort.", "traces": traces, 
-            "query_type": "sensitive_query", "selected_policy": "immediate_block",
-            "response_mode": "blocked", "recovery_attempts": 0, "final_status": "aborted_security",
-            "is_compositional": is_comp
-        }
-        
+
+        if sub_res["status"] == "error" and not is_comp:
+             # Fast exit for single queries
+             break
+
+    # 3. Aggregation Flow
     if not is_comp:
         res = sub_results[0]
         res["traces"] = traces
         return res
-        
-    # 4. Fusion Layer execution
-    add_trace("Response Fusion Layer", "info", "Fusing valid cross-policy outputs using strict constraint hierarchy.")
+
+    add_trace("Response Fusion", "success", "Fusing decomposed logic pathways into isolated formatting.")
     fused_ans = fuse_responses(query, sub_results)
-    
+
     return {
         "status": "success",
         "output": fused_ans,
         "traces": traces,
         "is_compositional": True,
         "sub_query_count": len(subs),
-        "fused_sub_queries": [
+        "final_status": "success",
+        "query_type": "compositional_query",
+        "response_mode": "fused",
+        "sub_queries": [
             {
                 "sub_query_string": s, 
                 "query_type": r.get("query_type"), 
