@@ -2,8 +2,7 @@
 
 AegisAI is a self-healing orchestration system for LLM pipelines that integrates input security, agent-based validation, and output scoring to detect hallucinations, reject unreliable responses, and recover from failures in real-world deployments.
 
-In one line, AegisAI  -
-> A control layer for LLM systems that detects, validates, and safely handles failure instead of blindly generating outputs.
+In brief, AegisAI is **a control layer for LLM systems that detects, validates, and safely handles failure instead of blindly generating outputs.**
 
 ## Key Results
 
@@ -63,6 +62,8 @@ When a user explicitly attempts to extract sensitive credentials, the Supervisor
 
 ### 2. Hallucination Abort (Deterministic Validation)
 ![System Architecture Hallucination Catch](assets/ques_system_arc.png)
+
+#### *Video Demo: [Watch the demo](https://youtu.be/oRqzG7YweG4)*
 
 Query: Asked for system architecture not fully present in the database.
 
