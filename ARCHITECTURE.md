@@ -11,25 +11,28 @@ This document outlines the high-level architecture of AegisAI, a self-healing AI
 1. **User Input**
    - Incoming query enters the system
 
-2. **Security Layer**
-   - Detects prompt injection and unsafe patterns
+2. **Master Security Firewall**
+   - Detects prompt injection, credential harvesting, and explicitly blocks malicious requests via rule-based intercepts.
 
-3. **RAG Layer**
-   - Retrieves relevant context
-   - Applies query rewriting if needed
+3. **Multi-Intent Decomposition**
+   - Heuristically detects compound queries.
+   - Strictly splits independent intents via enforced JSON outputs.
 
-4. **Evaluation Layer**
-   - Applies deterministic Jaccard scoring
-   - Flags hallucinations
+4. **Policy Routing Array**
+   - **Sensitive Path:** Instantly terminates and flags execution.
+   - **General Path:** Fast-tracks world-knowledge queries, constrained by structural ignorance guardrails (softening outputs).
+   - **Grounded Path:** Locks queries to internal vectors, moving to the RAG Layer.
 
-5. **Multi-Agent Reasoning**
-   - Prosecutor, Defender, Judge evaluate response
+5. **RAG & Evaluation Layer (Grounded Only)**
+   - Retrieves relevant context.
+   - Applies deterministic Jaccard scoring (< 20% rejected).
+   - Multi-agent courtroom evaluates factual boundaries.
+   - Invokes automatic recovery or aborts dynamically.
 
-6. **Orchestration & Recovery**
-   - Retry, rewrite, or abort based on evaluation
-
-7. **Final Output**
-   - Safe, validated response returned to user
+6. **Rule-Based Fusion Output**
+   - Combines validated sub-queries dynamically via immutable Python formatting.
+   - Prevents General outputs from hallucinating or overwriting Grounded facts.
+   - Safe, validated response returned to user dynamically streamed via NDJSON.
 
 ## Key Property
 
