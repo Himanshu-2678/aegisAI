@@ -11,6 +11,28 @@ In brief, AegisAI is **a control layer for LLM systems that detects, validates, 
 - Developed multi-intent query dissection achieving **60% Compositional Success Rate (CSR)** using using structured decomposition and rule-based response fusion.
 
 
+## Research Alignment & Methodology
+
+AegisAI is built on proven academic frameworks to ensure deterministic behavior in probabilistic systems. I leverage and bridge logic from several pivotal research papers, integrating selective ideas for maximum reliability:
+
+1.  **[Multi-agent Debate (Du et al., 2023)](https://arxiv.org/abs/2305.14325)**
+    - **Implementation**: Implemented as the **Prosecutor vs. Defender** setup ([`evaluation/detectors.py`](file:///c:/Users/himan/Desktop/Projects/aegisAI/evaluation/detectors.py)).
+    - **Idea**: Uses agents with conflicting objectives to debate factual grounding, resolving biased self-evaluation.
+
+2.  **[Self-RAG (Asai et al., 2023)](https://arxiv.org/abs/2310.11511)**
+    - **Implementation**: Powers the **"Critique-then-Correct" Self-Healing Loop** ([`orchestrator/orchestrator.py`](file:///c:/Users/himan/Desktop/Projects/aegisAI/orchestrator/orchestrator.py)).
+    - **Idea**: Uses explicit critique tokens (Jaccard scoring) to trigger autonomous recovery strategies.
+
+3.  **[Self-Consistency Improves Chain of Thought Reasoning (Wang et al., 2022)](https://arxiv.org/abs/2203.11171)**
+    - **Implementation**: Deployed as the **"Multi-Draft Consensus"** strategy ([`strategies/policies.py`](file:///c:/Users/himan/Desktop/Projects/aegisAI/strategies/policies.py)).
+    - **Idea**: Uses **multiple generations to detect inconsistency** and selects the most factually consistent output via voting consensus.
+
+4.  **[ReAct: Synergizing Reasoning and Acting (Yao et al., 2022)](https://arxiv.org/abs/2210.03629)**
+    - **Implementation**: Utilized in the **Advanced Multi-Signal Evaluator** ([`evaluation/detectors.py`](file:///c:/Users/himan/Desktop/Projects/aegisAI/evaluation/detectors.py)).
+    - **Idea**: Uses **structured reasoning traces (Thought/Action)** for better diagnosis and observability of failure nodes.
+
+By integrating these methodologies, AegisAI converts a raw LLM from a simple generator into a controlled, observable, and self-correcting orchestration layer.
+
 ## Overview
 Modern LLM systems are fundamentally non-deterministic. They hallucinate, fail unpredictably, and are vulnerable to adversarial inputs such as prompt injections.
 
@@ -28,7 +50,7 @@ The system acts as a meta-intelligence layer, not just a wrapper.
 Instead of:
 `User -> LLM -> Output`
 
-We enforce:
+I enforce:
 `User -> Security Layer -> Retrieval -> Evaluation -> Multi-Agent Reasoning -> Final Output`
 
 This ensures that:
@@ -180,7 +202,7 @@ This highlights a key limitation of rule-based or heuristic prompt filtering: th
 ## Engineering Decisions
 
 ### Latency vs Reliability
-We intentionally trade speed for correctness.
+I intentionally trade speed for correctness.
 - Multi-agent validation increases latency (~2x to 3x)
 - But reduces hallucination risk significantly
 
